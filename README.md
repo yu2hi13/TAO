@@ -68,7 +68,6 @@ Download `FlowNet2_checkpoint.pth.tar` from [here](https://drive.google.com/file
 
 ```text
 pre_processing/checkpoints/
-
 ```
 
 **(3) Extract Optical Flow**
