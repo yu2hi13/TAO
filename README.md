@@ -1,267 +1,394 @@
+Official PyTorch Implementation of  
+[Track Any Anomalous Object: A Granular Video Anomaly Detection](https://arxiv.org/abs/2506.05175)
 
-Official PyTorch Implementation of [Track Any Anomalous Object: A Granular Video Anomaly Detection](https://arxiv.org/abs/2506.05175)
+---
 
+**Track Any Anomalous Object (TAO)** introduces a **Granular Video Anomaly Detection framework** that, for the first time, unifies the detection and localization of **multiple fine-grained anomalous objects** within a single end-to-end pipeline.
 
-![[Pasted image 20251210200537.png]]
+Unlike conventional video anomaly detection methods that assign anomaly scores densely to every pixel at each time step, TAO reformulates anomaly detection as a **pixel-level tracking problem of anomalous objects**. By explicitly linking anomaly scores to downstream tasks such as **image segmentation** and **video object tracking**, our framework eliminates the need for heuristic threshold selection and enables more accurate and robust anomaly localization, even in long and challenging video sequences.
 
-**Track Any Anomalous Object (TAO)** introduces a Granular Video Anomaly Detection Framework that, for the first time, integrates the detection of multiple fine-grained anomalous objects into a unified framework. Unlike methods that assign anomaly scores to every pixel at each moment, our approach transforms the problem into pixel-level tracking of anomalous objects. By linking anomaly scores to subsequent tasks such as image segmentation and video tracking, our method eliminates the need for threshold selection and achieves more precise anomaly localization, even in long and challenging video sequences.
+---
 
 # Getting Started
 
-## 1 Data preparation
+## 1 Data Preparation
 
 ### UCSDped2
-	just need ped2
 
+Only the **Ped2** subset is required for the default experimental setup.
+
+Dataset reference:  
 [UCSD Anomaly Detection Dataset](http://www.svcl.ucsd.edu/projects/anomaly/dataset.html)
 
+Download the dataset:
 
-```
 cd datasets
-
 wget http://www.svcl.ucsd.edu/projects/anomaly/UCSD_Anomaly_Dataset.tar.gz
-```
 
+yaml
+复制代码
 
+---
 
 ## 2 Pre-processing
 
-### 2.1 Extract frames 
+### 2.1 Extract Frames
 
-clipp the video to frames
+Convert video clips into frame sequences:
 
-```
 cd data
 python extract_frames.py
-```
 
-```
-path_videos = "./data/{datasets}}/{training/testing}_videos/"
+php
+复制代码
 
-path_frames =  "./data/{datasets}}/{training/testing}/frames"
-```
+Directory structure:
 
-### 2.2 Optical flows
+path_videos = "./data/{dataset}/{training/testing}_videos/"
+path_frames = "./data/{dataset}/{training/testing}/frames/"
 
-extract optical flows in videos using use [FlowNet2.0](https://github.com/NVIDIA/flownet2-pytorch)
+yaml
+复制代码
 
+---
 
-（1）install  [FlowNet2.0](https://github.com/NVIDIA/flownet2-pytorch). ：
+### 2.2 Optical Flow Extraction
 
-```
+Optical flow is extracted using **FlowNet2.0**.
+
+Reference:  
+https://github.com/NVIDIA/flownet2-pytorch
+
+#### (1) Install FlowNet2.0
+
 cd pre_processing
 bash install_flownet2.sh
 cd ..
-```
 
-（2）download the pre-trained FlowNet2 weights :
+bash
+复制代码
 
-from [here](//drive.google.com/file/d/1hF8vS6YeHkx3j2pfCeQqqZGwA_PJq_Da/view?usp=sharing)  and place it in `pre_processing/checkpoints`
+#### (2) Download Pre-trained FlowNet2 Weights
 
-（3）extract flows from Ped2 frames：
+Download from:  
+https://drive.google.com/file/d/1hF8vS6YeHkx3j2pfCeQqqZGwA_PJq_Da/view
 
-save the results to `./data/ped2/training/flows/`
+Place the weights in:
 
-- test frames：
-```
-  python flow.py --dataset_name=ped2
-  ```
-- train frames：
-```
-  python flow.py --dataset_name=ped2 --train
-  ```
+pre_processing/checkpoints/
 
-### 2.3 Object detection
+css
+复制代码
 
-	bounding boxes {datasets}_bboxes_test/train.npy
+#### (3) Extract Optical Flow from Ped2 Frames
 
-#### （1）Directly use
+The extracted flows are saved to:
 
-Our object detector outputs are provided [here](https://drive.google.com/drive/folders/1BnjzuwxyXio2sNU_4w7rlTw4PcURlq_R?usp=sharing). Set up the bounding boxes by placing the corresponding files in the following folders:
+./data/ped2/{training/testing}/flows/
 
-- All files for Ped2 should be placed in:  `./data/ped2`
-- All files for Avenue should be placed in:  `./data/avenue`
-- All files for ShanghaiTech should be placed in:  `./data/shanghaitech`
+diff
+复制代码
+
+- Test frames:
+python flow.py --dataset_name=ped2
+
+diff
+复制代码
+
+- Training frames:
+python flow.py --dataset_name=ped2 --train
+
+yaml
+复制代码
 
 ---
-#### （2）Prepare by yourself
 
-> [!TIP]
-> the results are same as (1)
+### 2.3 Object Detection
 
-This section describes how to prepare the object detector to extract bounding boxes:
+Bounding box annotations are stored as:
 
-Please install the Detectron2 library by executing the following commands:
+{dataset}_bboxes_train.npy
+{dataset}_bboxes_test.npy
 
-```
+yaml
+复制代码
+
+#### (1) Directly Use Provided Detections (Recommended)
+
+Precomputed object detection results are provided here:  
+https://drive.google.com/drive/folders/1BnjzuwxyXio2sNU_4w7rlTw4PcURlq_R
+
+Please place the files as follows:
+
+- Ped2 → `./data/ped2`
+- Avenue → `./data/avenue`
+- ShanghaiTech → `./data/shanghaitech`
+
+---
+
+#### (2) Generate Bounding Boxes Yourself
+
+> **Note**  
+> The results are identical to those provided in option (1).
+
+Install Detectron2:
+
 python -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
-```
 
-Then download the ResNet50-FPN weights by executing:
+yaml
+复制代码
 
-```
-wget https://dl.fbaipublicfiles.com/detectron2/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x/137849600/model_final_f10217.pkl -P pre_processing/checkpoints/
-```
+Download the ResNet50-FPN pre-trained weights:
 
-Run the following command to detect all the foreground objects.
+wget https://dl.fbaipublicfiles.com/detectron2/COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x/137849600/model_final_f10217.pkl
+-P pre_processing/checkpoints/
 
-```
-python pre_processing/bboxes.py [--dataset_name] [Optional: --train] 
-```
+csharp
+复制代码
 
-E.g., In order to extract all train objects from Ped2:
+Run object detection:
 
-```
-python pre_processing/bboxes.py --dataset_name=ped2 --train 
-```
+python pre_processing/bboxes.py [--dataset_name] [--train]
 
-This will save the results to `./data/ped2/ped2_bboxes_train.npy`, where each item contains all the bounding boxes in a single video frame.
+makefile
+复制代码
 
-In order to extract all test objects from Ped2:
+Example: extract training bounding boxes for Ped2:
 
-```
+python pre_processing/bboxes.py --dataset_name=ped2 --train
+
+csharp
+复制代码
+
+Output file:
+
+./data/ped2/ped2_bboxes_train.npy
+
+bash
+复制代码
+
+Extract test bounding boxes:
+
 python pre_processing/bboxes.py --dataset_name=ped2
-```
 
-This will save the results to `./data/ped2/ped2_bboxes_test.npy`, where each item contains all the bounding boxes in a single video frame.
+csharp
+复制代码
 
-### 2.4 Count frames
+Output file:
 
-Count the number of frames for each video clip and calculate the cumulative frame index
+./data/ped2/ped2_bboxes_test.npy
 
-```
+yaml
+复制代码
+
+---
+
+### 2.4 Count Frames
+
+Compute the number of frames per video clip and the cumulative frame index:
+
 cd data
 python count_frames.py
-```
 
-## 3 Extract anomalous boxes
+yaml
+复制代码
 
-### 3.1 Feature extraction
+---
 
-extract velocity features and deep features
-we have provided the pose features (pose.npy)
+## 3 Extract Anomalous Boxes
 
-```
-python feature extraction --{datasets}
-```
+### 3.1 Feature Extraction
 
-### 3.2 Score calibration
+We extract:
+- Motion velocity features
+- Deep appearance features
 
-To compute calibration parameters for each representation, run the following command:
+Pose features (`pose.npy`) are provided.
 
-```
-python score_calibration.py [--dataset_name]
-```
+python feature_extraction.py --dataset_name={dataset}
+
+yaml
+复制代码
+
+---
+
+### 3.2 Score Calibration
+
+Compute calibration parameters for each feature representation:
+
+python score_calibration.py --dataset_name={dataset}
+
+yaml
+复制代码
+
+---
 
 ### 3.3 Evaluation
 
-you can evaluate by running the following command:
+Run anomaly evaluation:
 
-```
-python evaluate.py [--dataset_name] [--sigma]
-```
+python evaluate.py --dataset_name={dataset} --sigma={sigma}
 
-We usually use `--sigma=3` for Ped2 and Avenue, and `--sigma=7` for ShanghaiTech.
+yaml
+复制代码
 
-### 3.4 Get anomalous boxes
+Recommended values:
+- Ped2 / Avenue: `sigma = 3`
+- ShanghaiTech: `sigma = 7`
 
-- **ped2：**
-```
+---
+
+### 3.4 Extract Anomalous Bounding Boxes
+
+For **Ped2**:
+
 python getbox_ped2.py
-``````
 
-## 4 Robust filtering and SAM2 inference
+yaml
+复制代码
+
+---
+
+## 4 Robust Filtering and SAM2 Inference
 
 ### 4.1 Install SAM2
 
-[SAM2](https://github.com/facebookresearch/sam2.git)
+Please follow the official repository:  
+https://github.com/facebookresearch/sam2
 
-### 4.2 **Robust filtering**
+---
 
-`compute_{datasets}.py` 
+### 4.2 Robust Filtering
 
+compute_{dataset}.py
 
-### 4.3 SAM2 inference
+yaml
+复制代码
 
-`sam2_inference.py`
+---
 
-```
-# frame dates
-video_dirs = ./data/{datasets}/testing/frames
+### 4.3 SAM2 Inference
 
-# anomalous dates
-pkl_dir = ./{from getbox_ped2.py's output}
-```
+sam2_inference.py
 
-## 5 Experiment 
+yaml
+复制代码
 
-###  **Pixel-level**
+Paths configuration:
 
+frame data
+video_dirs = ./data/{dataset}/testing/frames
 
-`cd Benchmark_Metrics/pixel_level`
+anomalous regions
+pkl_dir = ./outputs/getbox_results/
 
-process the dates after robust filtering
+yaml
+复制代码
 
-（1）`python vsresult_process.py` 
+---
 
-to get  **AUROC AP AUPRO F1**
+## 5 Experiments
 
-（2）`python sam2_evaluate.py` 
+### Pixel-level Evaluation
 
+cd Benchmark_Metrics/pixel_level
 
-### **Object-level**
+yaml
+复制代码
 
+Process results after robust filtering:
 
-（1）`segment-anything-2/get_box_results.py` 
-to get anomalies-path（video_segments_boxes_sam_10）
+1. Compute metrics:
 
-（2）`segment-anything-2/get_gt.ipyb` 
-to get tracks-path
+python vsresult_process.py
 
-（3）compute **TBDC** and **RBDC**
+markdown
+复制代码
 
-```
-python compute_tbdc_rbdc.py --tracks-path= --anomalies-path= --num-frames=
-```
+Metrics include:
+- AUROC
+- AP
+- AUPRO
+- F1-score
 
-- `tracks-path` is the path to the folder containing the tracks for all videos.
-    - The tracks are organized as follows:
-        - for each video, we have a txt file containing all the regions with the following format:
-            
-            track_id, frame_id, x_min, y_min, x_max, y_max
-            
-        - the track_id and frame_id must be in ascending order
-            
-- `anomalies-path` is the path to the folder containing the detected anomaly regions for all videos.
-    - The anomaly regions are organized as follows:
-        - for each video, we have a txt file containing all the detected regions with the following format:
-            
-            frame_id, x_min, y_min, x_max, y_max, anomaly_score
-            
-- `num-frames` is the total number of frames in the videos.
-- The name of the video tracks must match the name of the detected region per video.
+2. Evaluate SAM2 outputs:
 
-# Installation
+python sam2_evaluate.py
 
-It's recommended to create a two discrete environments .
+yaml
+复制代码
 
-(1) Before [[#4 Robust filtering and SAM2 inference]] :
+---
 
-```
+### Object-level Evaluation
+
+1. Extract detected anomaly trajectories:
+
+segment-anything-2/get_box_results.py
+
+markdown
+复制代码
+
+2. Extract ground-truth tracks:
+
+segment-anything-2/get_gt.ipynb
+
+markdown
+复制代码
+
+3. Compute **TBDC** and **RBDC**:
+
+python compute_tbdc_rbdc.py
+--tracks-path=PATH_TO_GT_TRACKS
+--anomalies-path=PATH_TO_DETECTIONS
+--num-frames=NUM_FRAMES
+
+lua
+复制代码
+
+Track format:
+
+track_id, frame_id, x_min, y_min, x_max, y_max
+
+lua
+复制代码
+
+Detection format:
+
+frame_id, x_min, y_min, x_max, y_max, anomaly_score
+
+yaml
+复制代码
+
+---
+
+## Installation
+
+We recommend using **two separate environments**.
+
+### Environment 1 (Before Robust Filtering and SAM2 Inference)
+
 python==3.7
 torch==1.12.0+cu102
-```
 
-(2)  Follow [SAM2](https://github.com/facebookresearch/sam2.git)
+yaml
+复制代码
 
-# Citation
+### Environment 2 (SAM2)
 
-If you find this useful, please cite our paper:
-```
-@article{
+Follow the official SAM2 installation instructions.
 
+---
 
+## Citation
 
+If you find this work useful, please cite:
 
+@article{tao2025track,
+title = {Track Any Anomalous Object: A Granular Video Anomaly Detection Framework},
+author = {Author Names},
+journal = {arXiv preprint arXiv:2506.05175},
+year = {2025}
 }
-```
+
+复制代码
