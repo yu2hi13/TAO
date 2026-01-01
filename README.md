@@ -199,7 +199,7 @@ Please follow the instructions in the [official SAM2 repository](https://github.
 #### 4.2 Robust Filtering
 
 ```bash
-python compute_{dataset}.py
+python robust_filtering.py
 
 ```
 
