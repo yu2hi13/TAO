@@ -239,21 +239,21 @@ python vsresult_process.py
 **2. Evaluate SAM2 outputs:**
 
 ```bash
-python sam2_evaluate.py
+python pixle_level_evaluate.py
 
 ```
 
 ### Object-level Evaluation
 
 1. **Extract detected anomaly trajectories:**
-```bash
-python segment-anything-2/get_box_results.py
+```
+python get_anomalies_path.py.py
 
 ```
 
 
 2. **Extract ground-truth tracks:**
-Run the notebook: `segment-anything-2/get_gt.ipynb`
+Run the notebook: `get_tracks_path.ipynb`
 3. **Compute TBDC and RBDC:**
 ```bash
 python compute_tbdc_rbdc.py \
